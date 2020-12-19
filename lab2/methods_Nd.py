@@ -141,7 +141,7 @@ def _coordinate_descent(function_data: Dict, eps=_MIN_PDIST) -> np.ndarray:
 
     for i in range(_MAX_ITERS):        
         grad = np.zeros(dims)
-        grad[i % dims] = df(P)[i % dims]
+        grad[i % dims] = 1
         
         # next two lineas calculate lr for steepest descent.. do we need it here?
         # could be just:
@@ -184,9 +184,46 @@ def _projected_descent(function_data: Dict, project_fn: Callable, eps=_MIN_PDIST
     return path
     
     
-def _ravine_descent(function_data: Dict) -> np.ndarray:
-    pass
+def _ravine_descent(function_data: Dict, eps=_EPS, h=1e-4, C=5) -> np.ndarray:
+    f = function_data['func']
+    df = function_data['deriv']
+    v_k, v_k1 = function_data['initPointsForRavine']
+    
+    path = list()
+    
+    def gradient_step(v_k):
+        x_k = v_k - _DEFAULT_LR * df(v_k)
+        return x_k
+    
+    x_k = gradient_step(v_k)
+    x_k1 = gradient_step(v_k1)
+    path.append(x_k)
+    
+    for i in range(_MAX_ITERS):
+        path.append(x_k1)
 
+        v_k2 = x_k1 - (x_k1 - x_k) / np.linalg.norm(x_k1 - x_k) * h * np.sign(f(x_k1) - f(x_k))
+        x_k2 = gradient_step(v_k2)
+        
+        
+        cos_a_k2 = (np.dot(v_k2 - x_k1, x_k2 - x_k1)) / np.linalg.norm(v_k2 - x_k1) / np.linalg.norm(x_k2 - x_k1)
+        cos_a_k1 = (np.dot(v_k1 - x_k, x_k1 - x_k)) / (np.linalg.norm(v_k1 - x_k) * (np.linalg.norm(x_k1 - x_k)))
+        h = h * C ** (cos_a_k2 - cos_a_k1)
+        
+        v_k = v_k1
+        v_k1 = v_k2
+        
+        x_k = x_k1
+        x_k1 = x_k2
+           
+            
+        if np.linalg.norm(x_k1 - x_k) < eps or abs(f(x_k1) - f(x_k)) < eps:
+            path.append(x_k1)
+            break
+
+    path = np.array(path)
+    return path
+    
     
 _NAME_TO_FN = {
     'steepest-descent':_steepest_descent, 
