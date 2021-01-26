@@ -64,3 +64,13 @@ def get_inverse(A):
         AI[:, i] = solve_triangular_system(U, Y[i], lower=False)
 
     return AI
+
+
+def solve_matrix_equation(A, B):
+    n = A.shape[0]
+    
+    AI = np.zeros(A.shape)
+    for i in range(n):
+        AI[:, i] = solve_triangular_system(A, B[i], lower=False)
+        
+    return AI
